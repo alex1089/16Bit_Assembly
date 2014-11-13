@@ -1,0 +1,7 @@
+#ignore all
+*
+
+#but not
+!*.asm
+!.gitignore
+
