@@ -16,7 +16,6 @@
     EXTRN   RANDOM:FAR
     EXTRN   RESEED:FAR
     
-    extrn newline:far
 
 ;==============================================
 ;
@@ -36,9 +35,10 @@
 	unsortMSG   DB  'Unsorted Array:$'
 	sortedMSG   DB  10,13,'Sorted Array:$'
 	RESLTMSG    DB	'Results of sorts:$'
-	METH1MSG    DB	10,13,'Method 1:',10,13,' COMP  SWAPS   PASS',10,13,'$'
-	METH2MSG    DB	10,13,'Method 2:',10,13,' COMP  SWAPS   PASS',10,13,'$'
-	METH3MSG    DB	10,13,'Method 3:',10,13,' COMP  SWAPS   PASS',10,13,'$'
+	METH1MSG    DB	10,13,'Method 1:',10,13,'  COMP  SWAPS  PASS',10,13,'$'
+	METH2MSG    DB	10,13,'Method 2:',10,13,'  COMP  SWAPS  PASS',10,13,'$'
+	METH3MSG    DB	10,13,'Method 3:',10,13,'  COMP  SWAPS  PASS',10,13,'$'
+	CONT	    DB	10,13,'Press ENTER to continue',10,13,'$'
 	PAUSE	    DB  10,13,'Programmed by Aleksey Leshchuk, PRESS ENTER TO CONTINUE$'
 	
 
@@ -220,6 +220,10 @@
 		    JMP	    print
 		    .endif
 		    .if	    methd1Stat==0   ; if arrays arent processed, JMP to method1 to begin
+		    LEA	    DX,CONT 
+		    MOV	    AX,0900H	    ; display continue message
+		    INT	    21h
+		    CALL    GETDEC$
 		    JMP	    method1
 		    .endif
 		    MOV	    BH,1
