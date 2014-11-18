@@ -129,7 +129,8 @@
 		    INC	    [methd2Stat+BX]
 		    POP	    BX		    ; restore BX
 
-		    .if	    DX > 1	    ; if # of unsorted elements>1
+		    .if	    DX > 1 && CL>0	    ; if # of unsorted elements>1
+		    XOR	    CL,CL
 		    DEC	    DX		    ; DEC number of unsorted elements
 		    XOR	    BX,BX	    ; zero index counter
 		    JMP	    method2
