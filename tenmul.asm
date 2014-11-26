@@ -24,7 +24,7 @@
 	carry	DB  0
 	inpReq1 DB  10,13,'Enter first multiple (up to 10 digits): $'
 	inpReq2 DB  10,13,'Enter second multiple (up to 10 digits): $'
-	times	DB  ' x $'
+	inpERR	DB  10,13,'ERROR: Invalid input, try again.$'
 	equals	DB  10,13,' = $'
 	comma	DB  ',$'
 	PAUSE	DB  10,13,'Press ENTER to continue',10,13,'Programmed by Aleksey Leshchuk$'
@@ -44,17 +44,33 @@
 	inp1:
 		MOV	AX,0100h
 		INT	21H
+		.if	AL == 13 	; if CR is entered, JMP to inpMSG2
+		MOV	mul1Len,BL		; save the length of multiple entered
+		JMP	inpMSG2
+		.endif
 		.if	AL > 47 && AL < 58	; if number entered
 		XOR	AH,AH
 		SUB	AX,48			; adjust entered ascii code
 		MOV	[inpARR1+BX],AL		; MOV number entered into first multiple array
 		INC	BX
-		.endif
-		.if	AL == 13 || BX>9	; if CR is entered, JMP to inpMSG2
-		MOV	mul1Len,BL		; save the length of multiple entered
+		.if	BX>9
+		MOV	mul1Len,BL
 		JMP	inpMSG2
-		.endif
+		.endif 
 		JMP	inp1
+		.endif
+		LEA	DX,inpERR		; error message
+		MOV	AX,0900H
+		INT	21H
+		XOR	BX,BX			; Zero out BX to clear array
+	    clearArr1:				; clear entire inpARR1
+		MOV	[inpARR1+BX],0
+		.if	BX<9
+		INC	BX
+		JMP	clearArr1
+		.endif
+		JMP inpMSG1
+		
 	inpMSG2: 
 		LEA	DX,inpReq2
 		MOV	AX,0900H
@@ -63,17 +79,32 @@
 	inp2:
 		MOV	AX,0100h
 		INT	21H
+		.if	AL == 13 || BX>9	; if CR is entered, JMP to multiply
+		MOV	mul2Len,BL		; save multiple 2 length
+		JMP	initArrays
+		.endif
 		.if	AL > 47 && AL < 58	; if number entered
 		XOR	AH,AH
 		SUB	AX,48			; adjust entered ascii code
 		MOV	[inpARR2+BX],AL		; MOV number entered into first multiple array
 		INC	BX
-		.endif
-		.if	AL == 13 || BX>9	; if CR is entered, JMP to multiply
+		.if	BL>9
 		MOV	mul2Len,BL		; save multiple 2 length
 		JMP	initArrays
 		.endif
 		JMP	inp2
+		.endif
+		LEA	DX,inpERR		; error message
+		MOV	AX,0900H
+		INT	21H
+		XOR	BX,BX			; Zero out BX to clear array
+	    clearArr2:				; clear entire inpARR1
+		MOV	[inpARR2+BX],0
+		.if	BX<9
+		INC	BX
+		JMP	clearArr2
+		.endif
+		JMP inpMSG2
 	initArrays:
 		XOR	CX,CX			; zero out CX, inpARR1 index
 		
@@ -102,14 +133,12 @@
 		.endif
 
 	multiply:
-
+		XOR	AX,AX
 		MOV	AL,[arr2+19]		; move LSB into AL
 		AND	AL,1			; MASK LSB 
 		XOR	BX,BX			; zero out BX
 		MOV	BX,19			; initalize BX to last accum index
 		.if	AL>0 			; if AL was odd
-		XOR	BX,BX			; initialize for accumulation
-		MOV	BX,19
 		JMP	ACC			; add arr1 to accumulator
 		.endif 
 		XOR	CX,CX			; zero out counter/exitMultiply flag
@@ -136,6 +165,7 @@
 		ADD	[arr1+BX],6
 		.endif
 		.if	BX<19			; if not the last element in array
+		; check for carry from prev element
 		INC	BX
 		XOR	AX,AX
 		MOV	AL,00010000B		; 5th bit mask
@@ -150,7 +180,6 @@
 		.endif
 		XOR	AL,AL
 		MOV	AL,00001111B		; MASK to truncate most significant nibble
-		XOR	BX,BX
 	    TruncMSNcNonZ:
 		; truncate MSN in arr1, and count non zeros in arr2
 		AND	[arr1+BX],AL		; mask off LSN
@@ -181,8 +210,8 @@
 		.if	CX==1 && [arr2+19]==1	; if there is only one number left in arr2, and == 1
 		JMP	print			; exit multiply
 		.endif
-		XOR	CX,CX			; zero out counter/exit flag
 		XOR	BX,BX
+		XOR	CX,CX
 		MOV	BX,19
 		JMP	Edivide	
 
