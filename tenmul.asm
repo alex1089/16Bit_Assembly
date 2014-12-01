@@ -22,6 +22,7 @@
 	mul1Len	DB  ?		; Length of multiple 2
 	mul2Len	DB  ?		; Length of multiple 1
 	carry	DB  0
+	ZeroHandle DB	1	; variable to handle 0 or NULL input, if TRUE handle 0 
 	inpReq1 DB  10,13,'Enter first multiple (up to 10 digits): $'
 	inpReq2 DB  10,13,'Enter second multiple (up to 10 digits): $'
 	inpERR	DB  10,13,'ERROR: Invalid input, try again.$'
@@ -53,6 +54,9 @@
 		SUB	AX,48			; adjust entered ascii code
 		MOV	[inpARR1+BX],AL		; MOV number entered into first multiple array
 		INC	BX
+		.if	AL > 0
+		MOV	ZeroHandle,0
+		.endif				; if non zero digit entered, disable zero handle
 		.if	BX>9
 		MOV	mul1Len,BL
 		JMP	inpMSG2
@@ -76,6 +80,10 @@
 		MOV	AX,0900H
 		INT	21H		; output multiple2 input request
 		XOR	BX,BX
+		.if	ZeroHandle == 1		; if Zero entered for 2nd multiple, jmp to print
+		JMP	print
+		.endif 
+		MOV	ZeroHandle,1		; reset ZeroHandle flag
 	inp2:
 		MOV	AX,0100h
 		INT	21H
@@ -88,6 +96,9 @@
 		SUB	AX,48			; adjust entered ascii code
 		MOV	[inpARR2+BX],AL		; MOV number entered into first multiple array
 		INC	BX
+		.if	AL > 0
+		MOV	ZeroHandle,0
+		.endif				; if non zero digit entered, disable zero handle
 		.if	BL>9
 		MOV	mul2Len,BL		; save multiple 2 length
 		JMP	initArrays
@@ -107,6 +118,9 @@
 		JMP inpMSG2
 	initArrays:
 		XOR	CX,CX			; zero out CX, inpARR1 index
+		.if	ZeroHandle == 1		; if Zero entered for 2nd multiple, jmp to print
+		JMP	print
+		.endif 
 		
 	    arr1FILL:
 		MOV	BL,CL
@@ -121,6 +135,9 @@
 		.endif
 		XOR	CX,CX			; zero out inpARR2 index
 	    arr2FILL:
+		.if	ZeroHandle == 1		; if Zero entered for 2nd multiple, jmp to print
+		JMP	print
+		.endif 
 		MOV	BL,CL			; MOV beginning inp2ARR index into BL
 		MOV	AL,[inpARR2+BX]		; mov value of inp2ARR[BX] into AL
 		MOV	BX,20 
@@ -222,6 +239,11 @@
 		XOR	AX,AX
 		XOR	BX,BX
 		XOR	CX,CX	    ; print flag, start displaying when on
+		.if	ZeroHandle == 1		; if second multiple is 0
+		XOR	AX,AX			; zero out AX
+		CALL	PUTDEC$
+		JMP	quit			; print 0 and quit
+		.endif ; end of handle 0
 	    printM1:
 		XOR	AX,AX
 		MOV	AL,[accum+BX]
