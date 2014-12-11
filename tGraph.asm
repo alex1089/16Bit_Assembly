@@ -18,6 +18,14 @@
 
     .DATA
 	ScoreMSG    DB  'SCORE:  '
+	Intro1	    DB  '  Navigate using arrow keys           $'
+	Intro2	    DB	'  Snake will grow and speed           $'
+	Intro3	    DB	'up as you pick up more apples          $'
+	Intro4	    DB	'     Press ENTER to start             $'
+	Lost1	    DB	'                 You crashed!         $'
+	Lost2	    DB  '                Your SCORE was :$'
+	Lost3	    DB  'To play again press ENTER, to EXIT press ESC$'
+	Lost4	    DB  '        Programmed by: Aleksey Leshchuk$'
 	startVid    DW	0b800H
 	speed	    DB  4
 	crashed	    DB	0
@@ -103,15 +111,68 @@
 	  menu:
 	   topMenu:
 	    MOV	    word PTR ES:[DI],AX
-	    .if     DI<5486
+	    .if     DI<5506
 	    ADD	    DI,2
 	    JMP	    topMenu
 	    .endif
-	    MOV al,25
-	    call delay
+	    XOR	    CX,CX
+	   rSideMenu:
+	    ADD	    DI,160		; move down one row
+	    MOV	    word PTR Es:[DI],AX	; mov char and attribute to build right side
+	    .if	    CX<8		; loop for 8 rows
+	    INC	    CX
+	    JMP	    rSideMenu
+	    .endif
+	   bottomMenu:
+	    MOV	    word PTR ES:[DI],AX
+	    .if	    DI>6846		; loop to form bottom border
+	    SUB	    DI,2
+	    JMP	    bottomMenu
+	    .endif
+	   lSideMenu:
+	    SUB	    DI,160		; move one row up
+	    MOV	    word PTR ES:[DI],AX
+	    .if	    DI>5406		; loop until top is reached
+	    JMP	    lSideMenu
+	    .endif	; end of menu generation
+	    ; print intro
+	    MOV	    DX,0A19H	    ; 10x22
+	  printIntro:
+	    MOV	    AH,02H	    ; move cursor for output
+	    MOV	    BH,1	    ; to page 1
+	    INT	    10H
+	    PUSH    DX
+	    MOV	    AH,09H	    ; print string
+	    LEA	    DX,Intro1
+	    INT	    21H		    ; print Intro1 string
+	    MOV	    AH,02H	    ; mov cursor down one line
+	    POP	    DX
+	    ADD	    DX,100H	    ; move down one line
+	    INT	    10H
+	    PUSH    DX
+	    MOV	    AH,09H	    ; print intro2 string
+	    LEA	    DX,Intro2
+	    INT	    21H
+	    POP	    DX
+	    ADD	    DX,100H	    ; mov cursor down one line
+	    MOV	    AH,02H	    
+	    INT	    10H
+	    PUSH    DX
+	    MOV	    AH,09H	    ; print Intro3 string
+	    LEA	    DX,Intro3
+	    INT	    21H
+	    POP	    DX
+	    ADD	    DX,200H
+	    MOV	    AH,02H	    ; move cursor down
+	    INT	    10H
+	    LEA	    DX,Intro4	    ; print Intro4 string
+	    MOV	    AH,09h
+	    INT	    21H
+
+	    CALL    GETDEC$
 	    MOV	    AH,05H	    ; set video page
-	    mov al,0
-	    int 10h
+	    MOV	    AL,0	    ; page0
+	    INT	    10H 
 	    
 	    ; start of game
 	    MOV	    DI,240	    ; set to beginning position on screen, middle
@@ -205,7 +266,7 @@
 	    collision:
 	      .if   DI == [SnakeXY+BX]
 	      MOV   crashed,1		; set crash flag on
-	      JMP   QUIT 
+	      JMP   lost 
 	      .endif
 	      ADD   BX,2
 	      .if   BX<DX
@@ -242,7 +303,7 @@
 	    JMP	    game
 	    .endif
 
-	    JMP	    QUIT	; jump over genApple
+	    JMP	    lost	; jump over genApple
 	    genApple:
 		PUSH	DI	; SAVE DI
 		PUSH	CX
@@ -299,19 +360,64 @@
 		.endif
 		JMP	game	    ; return to game
 	    
-	quit:
+	Lost:
 	    MOV   AL,58h
 	    MOV   ES:[DI],AL
 	    INC   DI
 	    MOV   AL,84H
 	    MOV   ES:[DI],AL		; set head to blink red
-	    MOV	  AL,32
-	    CALL  DELAY			; delay for 2 seconds
+	    MOV	  AL,72
+	    CALL  DELAY			; delay for 4 seconds
+	printEnd:
+	    MOV	    AX,0501H
+	    INT 10H		    ; switch to video page 1
+	    MOV	    DX,0A12H	    ; 10x22
+	    MOV	    AH,02H	    ; move cursor for output
+	    MOV	    BH,1	    ; to page 1
+	    INT	    10H
+	    PUSH    DX
+	    MOV	    AH,09H	    ; print string
+	    LEA	    DX,Lost1
+	    INT	    21H		    ; print Lost1 string
+	    MOV	    AH,02H	    ; mov cursor down one line
+	    POP	    DX
+	    ADD	    DX,100H	    ; move down one line
+	    INT	    10H
+	    PUSH    DX
+	    MOV	    AH,09H	    ; print Lost2 string
+	    LEA	    DX,Lost2
+	    INT	    21H
+	    MOV	    AX,Score	    ; MOV score to output
+	    CALL    PUTDEC$
+	    POP	    DX
+	    ADD	    DX,100H	    ; mov cursor down one line
+	    MOV	    AH,02H	    
+	    INT	    10H
+	    PUSH    DX
+	    MOV	    AH,09H	    ; print Lost3 string
+	    LEA	    DX,Lost3
+	    INT	    21H
+	    POP	    DX
+	    ADD	    DX,200H
+	    MOV	    AH,02H	    ; move cursor down
+	    INT	    10H
+	    LEA	    DX,Lost4	    ; print Lost4 string
+	    MOV	    AH,09h
+	    INT	    21H
 	    
-	    call getdec$
-	    .if	    AX==1
+	PlayAgainInp:
+	    MOV	    AH,07	    ; no echo input
+	    INT	    21H
+	    .if	    AL==13
 	    JMP main
 	    .endif
+	    .if	    AL==27	    ; if ESC is entered
+	    JMP	    QUIT
+	    .endif
+	    JMP	    PlayAgainInp
+	quit:
+	    MOV	    AX,0003H	    ; reset video mode to 3 to clear screen
+	    INT	    10H
 	    MOV	    AX,4c00H
 	    INT	    21H
 	END main
